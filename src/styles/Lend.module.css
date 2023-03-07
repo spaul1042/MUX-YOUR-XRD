@@ -1,0 +1,87 @@
+/* Borrowers module styles */
+.borrowersContainer {
+    margin: 72px 20px 20px 20px;
+    padding: 20px;
+    background-color: #f1f1f1;
+    border-radius: 5px;
+    color:black;
+  }
+  
+  .subTitle {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .listItem {
+    margin-bottom: 10px;
+  }
+  
+  .borrower {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .name {
+    font-weight: bold;
+  }
+  
+  .amount {
+    font-style: italic;
+  }
+  
+  .toggleButton {
+    display: inline-block;
+    border: none;
+    border-radius: 20px;
+    padding: 5px 10px;
+    margin-left: 10px;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: #3498db;
+    position: relative;
+    overflow: hidden;
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  .toggleButton:hover {
+    background-color: #2980b9;
+  }
+  
+  .toggleButton:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background-color: #fff;
+    z-index: -1;
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .selectedToggleButton {
+    background-color: #2ecc71;
+  }
+  
+  .selectedToggleButton:hover {
+    background-color: #27ae60;
+  }
+  
+  .selectedToggleButton:before {
+    transform: translateX(100%);
+  }
+  
+
+
+
+
+
