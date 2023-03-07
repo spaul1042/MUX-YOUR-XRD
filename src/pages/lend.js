@@ -13,7 +13,7 @@ import {
 const dAppId =
   "account_tdx_b_1prxq939jqck96ep002hl6ytrhkxwqgwvmf4k4v4lzywqvzfd7r";
 
-export default function Borrow() {
+export default function Lend() {
   const [loading, setloading] = useState(true);
 
   const [account_address, setAddress] = useState("");
