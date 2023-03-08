@@ -106,8 +106,6 @@ export default function Borrow() {
     <>
       <NavBar />
 
-      Your Account: {account_address}
-
       <div className={styles.borrow_form}>
         <input
           type="number"

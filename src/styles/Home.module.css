@@ -20,3 +20,9 @@
   line-height: 1.5;
   margin-bottom: 1rem;
 }
+
+.connectbtn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
