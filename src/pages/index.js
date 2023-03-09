@@ -13,7 +13,7 @@ function Home() {
           Welcome to our Decentralized Lending Platform
         </h1>
         <p className={styles.p}>
-          Our lending platform allows you to borrow and lend money without the
+          MUX-YOUR-XRD ,lending platform allows you to borrow and lend money without the
           need for a centralized intermediary. By using smart contracts on a
           blockchain network, we enable peer-to-peer lending with transparent
           and secure transactions.
