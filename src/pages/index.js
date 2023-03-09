@@ -17,6 +17,8 @@ function Home() {
           need for a centralized intermediary. By using smart contracts on a
           blockchain network, we enable peer-to-peer lending with transparent
           and secure transactions.
+
+          We make P2P Lending more risk resistant and more fun !
         </p>
         <p>
           Whether you're looking to borrow money at a lower interest rate or
