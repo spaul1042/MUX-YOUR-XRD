@@ -28,20 +28,19 @@ mod mux_your_xrd {
 
         exchange_rate: Decimal, // exchange_rate means number of MUX Tokens to be paid to buy 1 XRD Token
         
-        number_of_loans: i32;   // loan id is indexed from 0 
+        number_of_loans: i32;   // loan id is indexed from 1
 
 
-        // 2) State variables for Borrower
+        // 2) State variables for Borrower and loans 
 
-        loan_request_loan_id: HashMap<ComponentAddress, vector<i32>>,
-        loan_request_loan_amount: HashMap<ComponentAddress, vector<i32>>,
-        loan_request_interest_rate: HashMap<ComponentAddress, vector<i32>>,
-        loan_request_loan_duration: HashMap<ComponentAddress, vector<i32>>,
+        // Each loan request is identified by a loan id 
 
-        loan_id_mapping_address: HashMap<i32, ComponentAddress>,
-        loan_id_mapping_amount: HashMap<i32, i32>,
-        loan_id_mapping_rate: HashMap<i32, i32>,
-        loan_id_mapping_duration: HashMap<i32, i32>,
+        loan_request_loan_id: HashMap<ComponentAddress, vector<i32>>,  // This is not gonna change, once a borrower has put a loan request, its gonna stay on chain even after the loan settlement has been done 
+
+        loan_id_mapping_address: HashMap<i32, ComponentAddress>,       // Similarly not gonna change 
+        loan_id_mapping_amount: HashMap<i32, i32>,                     // changes when a lender pays a fraction of the current loan amount
+        loan_id_mapping_rate: HashMap<i32, i32>,                       // not gonna change
+        loan_id_mapping_duration: HashMap<i32, i32>,                   // not gonna change
 
 
         borrower_info_penalty_amount: HashMap<ComponentAddress, i32>,
@@ -49,10 +48,12 @@ mod mux_your_xrd {
 
         // Collateral mapping = number of MUX Tokens collaterized
         borrower_collateral: HashMap<ComponentAddress, i32>,
+        // Total Loan Amount in XRD
+        borrower_loan_amount: HashMap<ComponentAddress,i32>,
         // Repayment Score mapping
-        borrower_repayment_score: HashMap<ComponentAddress, i32> =,
+        borrower_repayment_score: HashMap<ComponentAddress, i32>,
         // Credit Score ma]ing
-        borrower_credit_score: HashMap<ComponentAddress, i32> =,
+        borrower_credit_score: HashMap<ComponentAddress, i32>,
         
 
         // 3) State Variables for Lender 
@@ -104,15 +105,20 @@ mod mux_your_xrd {
                 number_of_loans: 0,
 
                 loan_request_loan_id: HashMap:new(),
-                loan_request_interest_rate: HashMap:new(),
-                loan_request_loan_duration: HashMap:new(),
-                loan_request_loan_amount: HashMap:new(),
+                  
+                loan_id_mapping_address: HashMap:new(),
+                loan_id_mapping_amount: HashMap:new(),
+                loan_id_mapping_rate: HashMap:new(),
+                loan_id_mapping_duration: HashMap:new(),
+                
 
                 borrower_info_penalty_amount: HashMap:new(),
                 borrower_info_value_good_transaction: HashMap:new(),
 
                 borrower_collateral: HashMap:new(),
         
+                borrower_loan_amount: HashMap:new(),
+
                 borrower_repayment_score: HashMap:new(),
      
                 borrower_credit_score: HashMap:new(),
@@ -131,8 +137,8 @@ mod mux_your_xrd {
             
             // Define the access rules
             let access_rules = AccessRules::new()
-               .method("register_asa_borrower", rule!(require(BRW_bucket_address)), AccessRule::DenyAll)
-               .method("register_asa_lender", rule!(require(LND_bucket_address)), AccessRule::DenyAll)
+               .method("borrow", rule!(require(BRW_bucket_address)), AccessRule::DenyAll)
+               .method("lend", rule!(require(LND_bucket_address)), AccessRule::DenyAll)
                .default(AccessRule::AllowAll, AccessRule::DenyAll);
 
             // Attach the access rules to the component
@@ -141,10 +147,8 @@ mod mux_your_xrd {
             (component.globalize(), MUX_bucket, BRW_bucket, LND_bucket)
 
         }
-
-
         
-        //A) Register as a Borrower 
+        //A) Register as a Borrower, here payment is done in XRD Tokens 
         pub fn register_asa_borrower(&mut self, mut payment: Bucket) -> (Bucket, Bucket) {
 
             // take our price in XRD out of the payment and issue a BRW badge token
@@ -159,8 +163,95 @@ mod mux_your_xrd {
             (self.BRW_vault.take(1), payment)
         }
 
-        // B) Register as a Lender
-        pub fn register_asa_lender(&mut self, mut payment: Bucket) -> (Bucket, Bucket) {
+        //B) Deposit Collateral
+        // Data structures Modified in this call method, here payment is done in MUX Tokens 
+
+        // // Collateral mapping = number of MUX Tokens collaterized
+        // borrower_collateral: HashMap<ComponentAddress, i32>,
+
+        pub fn deposit_collateral(&mut self, mut account_address:ComponentAddress, mut amount :i32, mut payment: Bucket) -> (Bucket) {
+
+            // take our collateral in MUX out of the payment and increase collateral deposited by amount
+            // if the caller has sent too few, or sent something other than MUX, they'll get a runtime error
+
+            let our_share = payment.take(amount);
+            self.MUX_vault.put(our_share);
+            
+            let mut curr_collateral:i32 = amount;
+            
+            if let Some(value) = self.borrower_collateral.get(&account_address)
+                 curr_collateral += value;
+
+            self.borrower_collateral.insert(&account_address, curr_collateral);
+
+            (payment)
+        }
+
+        // C) Post a Borrow/Loan request
+        // Data structures manipulated/modified/queried in this call method
+
+        // loan_request_loan_id: HashMap<ComponentAddress, vector<i32>>,
+
+        // loan_id_mapping_address: HashMap<i32, ComponentAddress>,
+        // loan_id_mapping_amount: HashMap<i32, i32>,
+        // loan_id_mapping_rate: HashMap<i32, i32>,
+        // loan_id_mapping_duration: HashMap<i32, i32>,
+
+        // // Collateral mapping = number of MUX Tokens collaterized
+        // borrower_collateral: HashMap<ComponentAddress, i32>,
+        // // Total Loan Amount in XRD
+        // borrower_loan_amount: HashMap<ComponentAddress,i32>,
+
+        pub fn borrow(&mut self, loan_amount:i32, interest_rate:i32, loan_duration:i32, account_address:ComponentAddress)
+        {
+            let mut curr_collateral:i32 = 0;
+            let mut curr_loan_amount:i32 = loan_amount;
+
+            if let Some(value) = self.borrower_collateral.get(&account_address)
+                 curr_collateral = value;
+
+            if let Some(value) = self.borrower_loan_amount.get(&account_address)
+                 curr_loan_amount += value;
+
+            assert!(curr_collateral >= curr_loan_amount, "Collateral deposited is not sufficient enought to take the loan");
+
+            // The borrower is eligible to take loan so increase the loan amount to curr_loan_amount
+            self.borrower_loan_amount.insert(&account_address, &curr_loan_amount);
+
+            //Modify On chain record keeping data Structures 
+            if let Some(value) = self.loan_request_loan_id.get(&account_address) {
+                
+                let curr_id:i32 = self.number_of_loans+1;
+                self.number_of_loans += 1;
+
+                let mut vector1:Vec<i32> = value;
+                vector1.push(&curr_id);
+                self.loan_request_loan_id.insert(&account_address, &vector1);
+                
+                self.loan_id_mapping_address.insert(&curr_id, &account_address);
+                self.loan_id_mapping_amount.insert(&curr_id, &loan_amount);
+                self.loan_id_mapping_rate.insert(&curr_id, &interest_rate);
+                self.loan_id_mapping_duration.insert(&curr_id, &loan_duration);
+
+                 
+            } else {
+                let curr_id:i32 = self.number_of_loans+1;
+                self.number_of_loans += 1;
+
+                let mut vector1:Vec<i32> = Vec::new();
+                vector1.push(&curr_id);
+                self.loan_request_loan_id.insert(&account_address, &vector1);
+                
+                self.loan_id_mapping_address.insert(&curr_id, &account_address);
+                self.loan_id_mapping_amount.insert(&curr_id, &loan_amount);
+                self.loan_id_mapping_rate.insert(&curr_id, &interest_rate);
+                self.loan_id_mapping_duration.insert(&curr_id, &loan_duration);
+            } 
+            
+        }
+
+         // D) Register as a Lender, here payment is done in XRD Tokens
+         pub fn register_asa_lender(&mut self, mut payment: Bucket) -> (Bucket, Bucket) {
 
             // take our price in XRD out of the payment and issue a LND badge token
             // if the caller has sent too few, or sent something other than XRD, they'll get a runtime error
@@ -172,6 +263,25 @@ mod mux_your_xrd {
 
             // return a tuple containing the LND_vault , plus whatever change is left on the input payment (if any)
             (self.LND_vault.take(1), payment)
+        }
+
+        //E) Lend money , hee payment is in XRD Tokens
+
+        pub fn lend(&mut self, mut amount_x:i32, mut payment: Bucket, mut target_loan_ids:Vec<i32>, mut collateral_factor:i32, mut credit_score_factor: i32)-> (Bucket)
+        {
+            // Each loan request is identified by a loan id 
+            // lend function takes a vector of loan ids, i.e. target_loan_ids, applies FUNDING algorithm to build second layer of risk reistance
+            // and distributes amount_x optimally among all the target_laon_ids, keeping in mind the collateral_factor and credit_score_factor
+
+            // collateral_factor<=100, credit_score_factor<=100 and collateral_factor + credit_score_factor = 100
+            // if collateral_factor > credit_score_factor -> means collateral matters more than credit_score for the lender and vice versa 
+
+            
+
+            
+            // let bucket = self.<token_vault_in_your_code>.take_all();
+            // let component = borrow_component!(<someone_else_account_address>);
+            // let result = component.call::<>("deposit", args![bucket]);
         }
     }
 }

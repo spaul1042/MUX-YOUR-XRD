@@ -58,7 +58,7 @@ function NavBar() {
             <Link href="/borrow">Borrow</Link>
           </li>
           <li>
-            <Link href="/myProfile">My Profile</Link>
+            <Link href="/demo">My Profile</Link>
           </li>
         </ul>
         <div className={styles.connectbtn}>
